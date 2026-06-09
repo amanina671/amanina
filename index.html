@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Integration Calculator</title>
+    <!-- Loading Math.js for safe, robust mathematical expression parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --accent: rgba(59, 130, 246, 0.25);
+            --border: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 950px;
+            padding: 24px;
+            border: 1px solid var(--border);
+        }
+
+        header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        header p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .calculator-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .calculator-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .result-box {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .result-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #166534;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .result-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #14532d;
+            font-family: monospace, sans-serif;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .range-container {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .range-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .range-value {
+            font-weight: 700;
+            color: var(--primary);
+            font-family: monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            color: #991b1b;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: none;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            min-height: 400px;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .quick-presets {
+            margin-top: auto;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .presets-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .btn-preset {
+            background: #f1f5f9;
+            border: none;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            text-align: center;
+            transition: background 0.2s;
+        }
+
+        .btn-preset:hover {
+            background: #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Definite Integration Calculator</h1>
+        <p>Visualize the net signed area under any continuous mathematical curve</p>
+    </header>
+
+    <div class="calculator-layout">
+        <!-- Control panel / Sidebar -->
+        <div class="sidebar">
+            <div class="result-box">
+                <div class="result-label">Definite Integral Value</div>
+                <div class="result-value" id="integral-result">0.0000</div>
+            </div>
+
+            <div class="input-group">
+                <label for="function-input">Function f(x)</label>
+                <input type="text" id="function-input" value="x^2 - 2" placeholder="e.g., x^2 - 2, sin(x), etc.">
+            </div>
+
+            <div class="range-container">
+                <div class="range-header">
+                    <label for="param-a">Lower Bound (a)</label>
+                    <span class="range-value" id="val-a">-1.0</span>
+                </div>
+                <input type="range" id="param-a" min="-5" max="5" step="0.1" value="-1">
+            </div>
+
+            <div class="range-container">
+                <div class="range-header">
+                    <label for="param-b">Upper Bound (b)</label>
+                    <span class="range-value" id="val-b">2.0</span>
+                </div>
+                <input type="range" id="param-b" min="-5" max="5" step="0.1" value="2">
+            </div>
+
+            <div class="error-message" id="error-box"></div>
+
+            <div class="quick-presets">
+                <div class="presets-title">Try custom presets:</div>
+                <div class="preset-buttons">
+                    <button class="btn-preset" onclick="loadPreset('sin(x)', 0, 3.1)">Sine Wave</button>
+                    <button class="btn-preset" onclick="loadPreset('x^3 - 3*x', -2, 2)">Cubic Curve</button>
+                    <button class="btn-preset" onclick="loadPreset('exp(x)', -3, 1)">Exponential</button>
+                    <button class="btn-preset" onclick="loadPreset('1 / (1 + x^2)', -2, 2)">Bell Shape</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graph canvas display -->
+        <div class="canvas-container">
+            <canvas id="graphCanvas"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('graphCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // UI elements
+    const functionInput = document.getElementById('function-input');
+    const sliderA = document.getElementById('param-a');
+    const sliderB = document.getElementById('param-b');
+    const valA = document.getElementById('val-a');
+    const valB = document.getElementById('val-b');
+    const resultDisplay = document.getElementById('integral-result');
+    const errorBox = document.getElementById('error-box');
+
+    // Coordinate system dimensions
+    const xMin = -5, xMax = 5;
+    const yMin = -5, yMax = 5;
+
+    // Handle canvas sizing dynamically
+    function resizeCanvas() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height || 400;
+        update();
+    }
+
+    // Convert math coordinates to canvas pixel positions
+    function toCanvasX(x) {
+        return ((x - xMin) / (xMax - xMin)) * canvas.width;
+    }
+    function toCanvasY(y) {
+        return canvas.height - ((y - yMin) / (yMax - yMin)) * canvas.height;
+    }
+
+    // Safely evaluate user string function using math.js
+    function evaluateFunction(compiledExpr, xValue) {
+        try {
+            return compiledExpr.evaluate({ x: xValue });
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // Numerical integration using Composite Simpson's Rule
+    function calculateIntegral(compiledExpr, a, b) {
+        if (a === b) return 0;
+        
+        // Swap bounds if lower bound is greater than upper bound
+        let sign = 1;
+        if (a > b) {
+            let temp = a; a = b; b = temp;
+            sign = -1;
+        }
+
+        const n = 400; // Must be even for Simpson's rule
+        const h = (b - a) / n;
+        
+        let sum = evaluateFunction(compiledExpr, a) + evaluateFunction(compiledExpr, b);
+        
+        for (let i = 1; i < n; i++) {
+            let x = a + i * h;
+            let val = evaluateFunction(compiledExpr, x);
+            if (val === null || isNaN(val)) return NaN;
+            sum += (i % 2 === 0 ? 2 : 4) * val;
+        }
+        
+        return sign * (h / 3) * sum;
+    }
+
+    // Redraw entire graph canvas and compute value
+    function update() {
+        // Clear previous canvas frame
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        errorBox.style.display = 'none';
+
+        const rawFuncText = functionInput.value.trim();
+        let a = parseFloat(sliderA.value);
+        let b = parseFloat(sliderB.value);
+
+        // Keep labels matched to sliders
+        valA.textContent = a.toFixed(1);
+        valB.textContent = b.toFixed(1);
+
+        let compiled;
+        try {
+            compiled = math.compile(rawFuncText);
+            // Dry run test calculation to verify expressions
+            const testVal = compiled.evaluate({ x: 1 });
+            if (testVal === undefined || isNaN(testVal)) throw new Error("Invalid output structure");
+        } catch (err) {
+            errorBox.textContent = "Calculation error: Please check your syntax formula format.";
+            errorBox.style.display = 'block';
+            resultDisplay.textContent = "----";
+            return;
+        }
+
+        // 1. Draw Grid Lines
+        ctx.strokeStyle = '#f1f5f9';
+        ctx.lineWidth = 1;
+        for (let x = xMin; x <= xMax; x += 1) {
+            ctx.beginPath();
+            ctx.moveTo(toCanvasX(x), 0);
+            ctx.lineTo(toCanvasX(x), canvas.height);
+            ctx.stroke();
+        }
+        for (let y = yMin; y <= yMax; y += 1) {
+            ctx.beginPath();
+            ctx.moveTo(0, toCanvasY(y));
+            ctx.lineTo(canvas.width, toCanvasY(y));
+            ctx.stroke();
+        }
+
+        // 2. Draw Main Axes (X and Y center lines)
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, toCanvasY(0));
+        ctx.lineTo(canvas.width, toCanvasY(0));
+        ctx.moveTo(toCanvasX(0), 0);
+        ctx.lineTo(toCanvasX(0), canvas.height);
+        ctx.stroke();
+
+        // 3. Shading the Definite Integral Area
+        let startBound = Math.min(a, b);
+        let endBound = Math.max(a, b);
+        
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.25)';
+        ctx.beginPath();
+        
+        // Start shape anchor boundary on x-axis
+        ctx.moveTo(toCanvasX(startBound), toCanvasY(0));
+        
+        let steps = 200;
+        for (let i = 0; i <= steps; i++) {
+            let xVal = startBound + (i / steps) * (endBound - startBound);
+            let yVal = evaluateFunction(compiled, xVal);
+            if (yVal !== null && !isNaN(yVal)) {
+                ctx.lineTo(toCanvasX(xVal), toCanvasY(yVal));
+            }
+        }
+        // Close shape path anchor back down to x-axis
+        ctx.lineTo(toCanvasX(endBound), toCanvasY(0));
+        ctx.closePath();
+        ctx.fill();
+
+        // 4. Draw the actual function curve
+        ctx.strokeStyle = '#2563eb';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        let first = true;
+        
+        for (let i = 0; i <= canvas.width; i++) {
+            let xVal = xMin + (i / canvas.width) * (xMax - xMin);
+            let yVal = evaluateFunction(compiled, xVal);
+            
+            if (yVal !== null && !isNaN(yVal) && Math.abs(yVal) < 50) {
+                if (first) {
+                    ctx.moveTo(i, toCanvasY(yVal));
+                    first = false;
+                } else {
+                    ctx.lineTo(i, toCanvasY(yVal));
+                }
+            }
+        }
+        ctx.stroke();
+
+        // 5. Compute the Integral Output Value
+        let result = calculateIntegral(compiled, a, b);
+        if (isNaN(result)) {
+            resultDisplay.textContent = "Undefined";
+        } else {
+            resultDisplay.textContent = result.toFixed(4);
+        }
+    }
+
+    // Presets shortcut loader helper
+    function loadPreset(func, a, b) {
+        functionInput.value = func;
+        sliderA.value = a;
+        sliderB.value = b;
+        update();
+    }
+
+    // Set up real time dynamic input event listeners
+    functionInput.addEventListener('input', update);
+    sliderA.addEventListener('input', update);
+    sliderB.addEventListener('input', update);
+    
+    // Window initialization setups
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('DOMContentLoaded', resizeCanvas);
+</script>
+
+</body>
+</html>
